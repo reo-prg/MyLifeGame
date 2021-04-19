@@ -139,8 +139,11 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	SetOutApplicationLogValidFlag(false);
 	ChangeWindowMode(true);
 	SetGraphMode(WNDSIZE, WNDSIZE, 32);
-	SetMainWindowText(_T("XAudio2Practice"));
-	DxLib_Init();
+	SetMainWindowText(_T("LifeGame"));
+	if (DxLib_Init() == -1)
+	{
+		return -1;
+	}
 
 	int scr = MakeScreen(SCRWIDTH, SCRHEIGHT, true);
 	SetDrawScreen(scr);
