@@ -231,6 +231,7 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			{
 				lifes_[0][i][j] = false;
 				lifes_[1][i][j] = false;
+				gen = 0;
 			}
 		}
 	};
@@ -248,6 +249,7 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				bool l = (ran(mt) == 0);
 				lifes_[0][i][j] = l;
 				lifes_[1][i][j] = l;
+				gen = 0;
 			}
 		}
 	};
@@ -329,12 +331,13 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 void Stop(int mx, int my, bool cur, bool prev)
 {
+	int myn = my - SCR_OFFSETY;
 	if (cur)
 	{
 		if (mx >= GRID_OFFSET_X && mx < GRID_OFFSET_X + SCRWIDTH - 1 &&
-			my >= GRID_OFFSET_Y && my < GRID_OFFSET_Y + SCRHEIGHT - 1)
+			myn >= GRID_OFFSET_Y && myn < GRID_OFFSET_Y + SCRHEIGHT - 1)
 		{
-			bool& c = lifes_[currentBuffer][(my - GRID_OFFSET_Y) / GRID_SIZE][(mx - GRID_OFFSET_X) / GRID_SIZE];
+			bool& c = lifes_[currentBuffer][(myn - GRID_OFFSET_Y) / GRID_SIZE][(mx - GRID_OFFSET_X) / GRID_SIZE];
 			switch (currentType)
 			{
 			case InputType::NON:
