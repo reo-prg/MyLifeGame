@@ -27,6 +27,7 @@
 #define BUTTON_SIZEY 30
 
 #define DEF_DURATION 40
+#define SCR_OFFSETY 10
 
 enum class InputType
 {
@@ -161,6 +162,7 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	SetGraphMode(WNDSIZE, WNDSIZE, 32);
 	SetMainWindowText(_T("LifeGame"));
 	SetAlwaysRunFlag(true);
+	SetDoubleStartValidFlag(true);
 	if (DxLib_Init() == -1)
 	{
 		return -1;
@@ -288,7 +290,7 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		// 描画
 		ClsDrawScreen();
 
-		DrawGraph((WNDSIZE - SCRWIDTH) / 2, (WNDSIZE - SCRHEIGHT) / 2 + 10, scr, true);
+		DrawGraph((WNDSIZE - SCRWIDTH) / 2, (WNDSIZE - SCRHEIGHT) / 2 + SCR_OFFSETY, scr, true);
 		start.Draw();
 		stop.Draw();
 		reset.Draw();
@@ -304,8 +306,8 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			{
 				if (lifes_[currentBuffer][i][j])
 				{
-					DrawBox(GRID_OFFSET_X + j * GRID_SIZE + 1, GRID_OFFSET_Y + i * GRID_SIZE + 1,
-						GRID_OFFSET_X + (j + 1) * GRID_SIZE - 1, GRID_OFFSET_Y + (i + 1) * GRID_SIZE - 1, 0x66ff66, true);
+					DrawBox(GRID_OFFSET_X + j * GRID_SIZE + 1, GRID_OFFSET_Y + i * GRID_SIZE + 1 + SCR_OFFSETY,
+						GRID_OFFSET_X + (j + 1) * GRID_SIZE - 1, GRID_OFFSET_Y + (i + 1) * GRID_SIZE - 1 + SCR_OFFSETY, 0x66ff66, true);
 				}
 			}
 		}
