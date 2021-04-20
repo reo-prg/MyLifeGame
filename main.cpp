@@ -1,7 +1,8 @@
-#include <DxLib.h>
+ï»¿#include <DxLib.h>
 #include <string>
 #include <vector>
 #include <functional>
+#include <random>
 
 #define WIDTH 80
 #define HEIGHT 70
@@ -13,6 +14,19 @@
 #define WNDSIZE 720
 #define GRID_OFFSET_X ((WNDSIZE - SCRWIDTH)/ 2)
 #define GRID_OFFSET_Y ((WNDSIZE - SCRHEIGHT)/ 2)
+
+#define SPEED_STEP 4
+
+#define SPEED_OFFSETX 400
+#define SPEED_OFFSETY 20
+#define SPEED_SIZEX 50
+#define SPEED_SIZEY 30
+#define SPEED_INT 4
+
+#define BUTTON_SIZEX 70
+#define BUTTON_SIZEY 30
+
+#define DEF_DURATION 40
 
 enum class InputType
 {
@@ -57,7 +71,7 @@ public:
 		drawbox_ = true;
 	}
 
-	void SetDrawString(const std::wstring& str, unsigned int str_color)
+	void SetDrawString(const std::string& str, unsigned int str_color)
 	{
 		str_ = str;
 		strColor_ = str_color;
@@ -74,7 +88,7 @@ public:
 		if (drawstr_)
 		{
 			int l = GetDrawStringWidth(str_.c_str(), strlen2Dx(str_.c_str()));
-			DrawString(px_ + sx_ / 2 - l / 2, py_ + sy_ / 2, str_.c_str(), strColor_);
+			DrawString(px_ + sx_ / 2 - l / 2, py_ + sy_ / 2 - 10, str_.c_str(), strColor_);
 		}
 	}
 
@@ -85,7 +99,7 @@ public:
 		if (x > px_ && x < (px_ + sx_) &&
 			y > py_ && y < (py_ + sy_))
 		{
-			if (state_ == ButtonState::ACTIVE && !cur)
+			if (state_ == ButtonState::ACTIVE && !cur && prev)
 			{
 				func_();
 				return;
@@ -113,7 +127,7 @@ private:
 	int px_, py_, sx_, sy_;
 	unsigned int color_[4];
 	bool fill_;
-	std::wstring str_;
+	std::string str_;
 	unsigned int strColor_;
 
 	bool drawbox_ = false;
@@ -128,11 +142,17 @@ size_t currentBuffer = 0;
 BoxButton start;
 BoxButton stop;
 BoxButton reset;
+BoxButton random;
+BoxButton speed[SPEED_STEP];
 void (*currentUpdate)(int, int, bool, bool);
 InputType currentType = InputType::NON;
+constexpr int speedList[SPEED_STEP] = { 1, 2, 4, 8 };
+std::mt19937 mt;
+std::uniform_int_distribution<int> ran(0, 1);
 
 int counter = 0;
 int gen = 0;
+int currentSpeed = 1;
 
 int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
@@ -140,6 +160,7 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	ChangeWindowMode(true);
 	SetGraphMode(WNDSIZE, WNDSIZE, 32);
 	SetMainWindowText(_T("LifeGame"));
+	SetAlwaysRunFlag(true);
 	if (DxLib_Init() == -1)
 	{
 		return -1;
@@ -155,6 +176,9 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	}
 	SetDrawScreen(DX_SCREEN_BACK);
 
+	std::random_device rd;
+	mt = std::mt19937(rd());
+
 	for (int i = 0; i < HEIGHT; i++)
 	{
 		for (int j = 0; j < WIDTH; j++)
@@ -168,33 +192,35 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	bool prevMouseLeft = true;
 
 	start = BoxButton();
-	start.SetBox(100, WNDSIZE - 50, 50, 30, 0x66ff66, 0x44dd44, 0x228822, 0x222222, true);
-	start.SetDrawString(L"Start", 0x000000);
-	start.func_ = []() 
+	start.SetBox(100, WNDSIZE - 50, BUTTON_SIZEX, BUTTON_SIZEY, 0x66ff66, 0x44dd44, 0x228822, 0x222222, true);
+	start.SetDrawString("Start", 0x000000);
+	start.func_ = []()
 	{
 		currentUpdate = ExecuteLifes;
 		start.state_ = ButtonState::NONACTIVE;
 		stop.state_ = ButtonState::NON;
 		reset.state_ = ButtonState::NONACTIVE;
+		random.state_ = ButtonState::NONACTIVE;
 		counter = 0;
 	};
 	start.state_ = ButtonState::NON;
 
 	stop = BoxButton();
-	stop.SetBox((WNDSIZE - 50) / 2, WNDSIZE - 50, 50, 30, 0xff5566, 0xdd4444, 0x882222, 0x222222, true);
-	stop.SetDrawString(L"Stop", 0x000000);
+	stop.SetBox((WNDSIZE - 250) / 3 + 100, WNDSIZE - 50, BUTTON_SIZEX, BUTTON_SIZEY, 0xff5566, 0xdd4444, 0x882222, 0x222222, true);
+	stop.SetDrawString("Stop", 0x000000);
 	stop.func_ = []()
 	{
 		currentUpdate = Stop;
 		start.state_ = ButtonState::NON;
 		stop.state_ = ButtonState::NONACTIVE;
 		reset.state_ = ButtonState::NON;
+		random.state_ = ButtonState::NON;
 	};
 	stop.state_ = ButtonState::NONACTIVE;
 
 	reset = BoxButton();
-	reset.SetBox(WNDSIZE - 150, WNDSIZE - 50, 50, 30, 0x66ff66, 0x44dd44, 0x228822, 0x222222, true);
-	reset.SetDrawString(L"Reset", 0x000000);
+	reset.SetBox((WNDSIZE - 250) * 2 / 3 + 100, WNDSIZE - 50, BUTTON_SIZEX, BUTTON_SIZEY, 0x6666ff, 0x4444dd, 0x222288, 0x000044, true);
+	reset.SetDrawString("Reset", 0x000000);
 	reset.func_ = []()
 	{
 		for (int i = 0; i < HEIGHT; i++)
@@ -207,6 +233,37 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		}
 	};
 	reset.state_ = ButtonState::NON;
+
+	random = BoxButton();
+	random.SetBox(WNDSIZE - 150, WNDSIZE - 50, BUTTON_SIZEX, BUTTON_SIZEY, 0x6666ff, 0x4444dd, 0x222288, 0x000044, true);
+	random.SetDrawString("Random", 0x000000);
+	random.func_ = []()
+	{
+		for (int i = 0; i < HEIGHT; i++)
+		{
+			for (int j = 0; j < WIDTH; j++)
+			{
+				bool l = (ran(mt) == 0);
+				lifes_[0][i][j] = l;
+				lifes_[1][i][j] = l;
+			}
+		}
+	};
+	random.state_ = ButtonState::NON;
+
+	for (int i = 0; i < SPEED_STEP; i++)
+	{
+		speed[i] = BoxButton();
+		speed[i].SetBox(SPEED_OFFSETX + (SPEED_SIZEX + SPEED_INT) * i, SPEED_OFFSETY, 
+			SPEED_SIZEX, SPEED_SIZEY,
+			0xffffff, 0xbbbbbb, 0x888888, 0x444444, true);
+		speed[i].SetDrawString(("x" + std::to_string(speedList[i])).c_str(), 0x000000);
+		speed[i].func_ = [i]() 
+		{
+			currentSpeed = speedList[i];
+		};
+		speed[i].state_ = ButtonState::NON;
+	}
 
 
 	currentUpdate = Stop;
@@ -222,14 +279,24 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		start.IsHit(mouseX, mouseY, currentLeft, prevMouseLeft);
 		stop.IsHit(mouseX, mouseY, currentLeft, prevMouseLeft);
 		reset.IsHit(mouseX, mouseY, currentLeft, prevMouseLeft);
+		random.IsHit(mouseX, mouseY, currentLeft, prevMouseLeft);
+		for (int i = 0; i < SPEED_STEP; i++)
+		{
+			speed[i].IsHit(mouseX, mouseY, currentLeft, prevMouseLeft);
+		}
 
-		// •`‰æ
+		// æç”»
 		ClsDrawScreen();
-		
-		DrawGraph((WNDSIZE - SCRWIDTH) / 2, (WNDSIZE - SCRHEIGHT) / 2, scr, true);
+
+		DrawGraph((WNDSIZE - SCRWIDTH) / 2, (WNDSIZE - SCRHEIGHT) / 2 + 10, scr, true);
 		start.Draw();
 		stop.Draw();
 		reset.Draw();
+		random.Draw();
+		for (int i = 0; i < SPEED_STEP; i++)
+		{
+			speed[i].Draw();
+		}
 
 		for (int i = 0; i < HEIGHT; i++)
 		{
@@ -242,7 +309,12 @@ int _stdcall WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				}
 			}
 		}
-		DrawFormatString(10, 10, 0xffffff, L"%d¢‘ã", gen);
+		DrawFormatString(10, 10, 0xffffff, "%dä¸–ä»£", gen);
+		DrawString(340, 30, "SPEED:", 0xffffff);
+		DrawFormatString(450, 70, 0xffffff, "Current Speed:x%d", currentSpeed);
+
+		DrawBox(335, 15, SPEED_OFFSETX + (SPEED_SIZEX + SPEED_INT) * SPEED_STEP, 
+			SPEED_OFFSETY + SPEED_SIZEY + 5, 0xffffff, false);
 		ScreenFlip();
 
 		prevMouseLeft = currentLeft;
@@ -291,7 +363,7 @@ void Stop(int mx, int my, bool cur, bool prev)
 void ExecuteLifes(int mx, int my, bool cur, bool prev)
 {
 	counter++;
-	if (counter < 40) { return; }
+	if (counter < (DEF_DURATION / currentSpeed)) { return; }
 	for (int y = 0; y < HEIGHT; y++)
 	{
 		for (int x = 0; x < WIDTH; x++)
